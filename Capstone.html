@@ -1,0 +1,567 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InventoryIQ | Analytics Dashboard</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #f3f6fb;
+    color: #172033;
+    padding: 25px;
+}
+
+header {
+    background: #172554;
+    color: white;
+    padding: 25px;
+    border-radius: 14px;
+    margin-bottom: 25px;
+}
+
+header p {
+    margin-top: 8px;
+    color: #cbd5e1;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 18px;
+    margin-bottom: 25px;
+}
+
+.card, .panel {
+    background: white;
+    padding: 22px;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px #00000008;
+}
+
+.card p {
+    color: #64748b;
+    margin-bottom: 12px;
+}
+
+.card h2 {
+    color: #1d4ed8;
+    overflow-wrap: anywhere;
+}
+
+.panel {
+    margin-bottom: 25px;
+    overflow-x: auto;
+}
+
+h2, h3 {
+    margin-bottom: 18px;
+}
+
+h3 {
+    margin-top: 18px;
+}
+
+.form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+input, select, button {
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font-size: 14px;
+}
+
+input, select {
+    flex: 1;
+    min-width: 150px;
+}
+
+button {
+    cursor: pointer;
+    background: #2563eb;
+    color: white;
+    border: none;
+}
+
+button:hover {
+    opacity: 0.85;
+}
+
+.delete {
+    background: #dc2626;
+    padding: 8px 12px;
+}
+
+.badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.Budget {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.Standard {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.Premium {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+#message {
+    margin: 12px 0;
+    font-size: 14px;
+}
+
+#calculationResult {
+    margin-top: 12px;
+    font-weight: bold;
+    color: #1d4ed8;
+}
+
+#report {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: Consolas, monospace;
+    line-height: 1.8;
+}
+
+footer {
+    text-align: center;
+    color: #64748b;
+    padding: 15px;
+}
+
+@media(max-width: 600px) {
+    body {
+        padding: 12px;
+    }
+
+    header {
+        padding: 20px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>InventoryIQ</h1>
+    <p>Interactive Product Inventory & Analytics Dashboard</p>
+</header>
+
+<section class="stats">
+    <div class="card">
+        <p>Total Products</p>
+        <h2 id="count">0</h2>
+    </div>
+
+    <div class="card">
+        <p>Inventory Value</p>
+        <h2 id="total">$0.00</h2>
+    </div>
+
+    <div class="card">
+        <p>Budget Products</p>
+        <h2 id="budget">0</h2>
+    </div>
+
+    <div class="card">
+        <p>Premium Products</p>
+        <h2 id="premium">0</h2>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>Add New Product</h2>
+
+    <form id="productForm" class="form">
+        <input id="productName" type="text"
+               placeholder="Product name" required>
+
+        <input id="productPrice" type="number"
+               placeholder="Price ($)" min="0.01"
+               step="0.01" required>
+
+        <button type="submit">Add Product</button>
+    </form>
+
+    <p id="message" aria-live="polite"></p>
+</section>
+
+<section class="panel">
+    <h2>Inventory Management</h2>
+
+    <div class="form">
+        <input id="search" type="search"
+               placeholder="Search products...">
+
+        <select id="categoryFilter">
+            <option value="All">All Categories</option>
+            <option value="Budget">Budget</option>
+            <option value="Standard">Standard</option>
+            <option value="Premium">Premium</option>
+        </select>
+
+        <button id="resetButton" type="button">Reset Demo</button>
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; min-width:550px;">
+        <thead>
+            <tr style="background:#eff6ff;">
+                <th style="padding:14px; text-align:left;">Product</th>
+                <th style="padding:14px; text-align:left;">Price</th>
+                <th style="padding:14px; text-align:left;">Category</th>
+                <th style="padding:14px; text-align:left;">Action</th>
+            </tr>
+        </thead>
+        <tbody id="inventoryTable"></tbody>
+    </table>
+</section>
+
+<section class="panel">
+    <h2>Financial Analytics</h2>
+
+    <h3>Affordable Products (Under $200)</h3>
+    <p id="affordable">No products available.</p>
+
+    <h3>Price Calculator</h3>
+
+    <div class="form">
+        <input id="calcPrice" type="number"
+               placeholder="Product price" min="0.01" step="0.01">
+
+        <input id="discount" type="number"
+               placeholder="Discount %" value="10" min="0" max="100">
+
+        <input id="tax" type="number"
+               placeholder="Tax %" value="5" min="0" max="100">
+
+        <button id="calculateButton" type="button">
+            Calculate Final Price
+        </button>
+    </div>
+
+    <p id="calculationResult" aria-live="polite">
+        Enter values to calculate the final price.
+    </p>
+
+    <h3>Formatted Inventory Report</h3>
+    <pre id="report">Loading report...</pre>
+
+    <button id="copyButton" type="button">Copy Report</button>
+</section>
+
+<footer>
+    InventoryIQ | JavaScript Mini Project
+    <br><br>
+    Project successfully completed.
+</footer>
+
+<script>
+"use strict";
+
+// 1. Initial inventory
+const initialInventory = [
+    { id: 1, name: "Laptop", price: 800 },
+    { id: 2, name: "Mouse", price: 25 }
+];
+
+let inventory = initialInventory.map(item => ({ ...item }));
+let nextId = 3;
+
+// 2. Category classification using if...else
+function getCategory(price) {
+    if (price < 100) {
+        return "Budget";
+    } else if (price < 200) {
+        return "Standard";
+    } else {
+        return "Premium";
+    }
+}
+
+// 3. Arrow function for total inventory value
+const totalValue = items =>
+    items.reduce((sum, item) => sum + item.price, 0);
+
+// 4. Function for discount and tax calculation
+function calculateFinalPrice(price, discount = 0, tax = 0) {
+    const discountedPrice = price * (1 - discount / 100);
+    return discountedPrice * (1 + tax / 100);
+}
+
+// 5. Switch statement for category badges
+function getBadge(price) {
+    switch (getCategory(price)) {
+        case "Budget":
+            return "Budget";
+        case "Standard":
+            return "Standard";
+        case "Premium":
+            return "Premium";
+        default:
+            return "Unknown";
+    }
+}
+
+// 6. Update dashboard and reports
+function renderDashboard() {
+    const searchText = document.getElementById("search")
+        .value.trim().toLowerCase();
+
+    const selectedCategory =
+        document.getElementById("categoryFilter").value;
+
+    const visibleItems = inventory.filter(item => {
+        if (!item.name.toLowerCase().includes(searchText)) {
+            return false;
+        }
+
+        if (selectedCategory !== "All" &&
+            getCategory(item.price) !== selectedCategory) {
+            return false;
+        }
+
+        return true;
+    });
+
+    document.getElementById("count").textContent = inventory.length;
+
+    document.getElementById("total").textContent =
+        "$" + totalValue(inventory).toFixed(2);
+
+    document.getElementById("budget").textContent =
+        inventory.filter(item =>
+            getCategory(item.price) === "Budget").length;
+
+    document.getElementById("premium").textContent =
+        inventory.filter(item =>
+            getCategory(item.price) === "Premium").length;
+
+    const table = document.getElementById("inventoryTable");
+    table.replaceChildren();
+
+    // forEach() displays products
+    visibleItems.forEach(item => {
+        const row = document.createElement("tr");
+
+        const nameCell = document.createElement("td");
+        nameCell.textContent = item.name;
+
+        const priceCell = document.createElement("td");
+        priceCell.textContent = "$" + item.price.toFixed(2);
+
+        const categoryCell = document.createElement("td");
+        const badge = document.createElement("span");
+        badge.className = "badge " + getBadge(item.price);
+        badge.textContent = getBadge(item.price);
+        categoryCell.appendChild(badge);
+
+        const actionCell = document.createElement("td");
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "delete";
+        deleteButton.textContent = "Remove";
+
+        deleteButton.addEventListener("click", () => {
+            inventory = inventory.filter(
+                product => product.id !== item.id
+            );
+
+            renderDashboard();
+            showMessage("Product removed successfully.", false);
+        });
+
+        actionCell.appendChild(deleteButton);
+
+        [nameCell, priceCell, categoryCell, actionCell]
+            .forEach(cell => {
+                cell.style.padding = "14px";
+                cell.style.borderBottom = "1px solid #e2e8f0";
+                row.appendChild(cell);
+            });
+
+        table.appendChild(row);
+    });
+
+    // filter() selects products under $200
+    const affordable = inventory.filter(item => item.price < 200);
+
+    document.getElementById("affordable").textContent =
+        affordable.length
+            ? affordable.map(item => item.name).join(", ")
+            : "No affordable products found.";
+
+    // map() creates the enhanced financial report
+    const report = inventory.map(item => {
+        const category = getCategory(item.price);
+        const discount = item.price >= 500 ? 10 : 0;
+        const tax = 5;
+
+        const finalPrice = calculateFinalPrice(
+            item.price, discount, tax
+        );
+
+        return `${item.name.toUpperCase()} | ` +
+            `Price: $${item.price.toFixed(2)} | ` +
+            `Category: ${category} | ` +
+            `Discount: ${discount}% | Tax: ${tax}% | ` +
+            `Final Price: $${finalPrice.toFixed(2)}`;
+    });
+
+    document.getElementById("report").textContent =
+        report.length ? report.join("\n") : "Inventory is empty.";
+}
+
+// 7. Display messages
+function showMessage(message, isError) {
+    const element = document.getElementById("message");
+    element.textContent = message;
+    element.style.color = isError ? "#dc2626" : "#15803d";
+}
+
+// 8. Add products with input validation
+document.getElementById("productForm")
+    .addEventListener("submit", function(event) {
+        event.preventDefault();
+
+        const nameInput = document.getElementById("productName");
+        const priceInput = document.getElementById("productPrice");
+
+        const name = nameInput.value.trim();
+        const price = Number(priceInput.value);
+
+        if (!name || !Number.isFinite(price) || price <= 0) {
+            showMessage("Enter a valid name and positive price.", true);
+            return;
+        }
+
+        let duplicate = false;
+
+        // Loop using continue and break
+        for (const item of inventory) {
+            if (!item.name) {
+                continue;
+            }
+
+            if (item.name.toLowerCase() === name.toLowerCase()) {
+                duplicate = true;
+                break;
+            }
+        }
+
+        if (duplicate) {
+            showMessage("This product already exists.", true);
+            return;
+        }
+
+        inventory.push({
+            id: nextId++,
+            name: name,
+            price: price
+        });
+
+        this.reset();
+        renderDashboard();
+        showMessage("Product added successfully.", false);
+    });
+
+// 9. Search and category filtering
+document.getElementById("search")
+    .addEventListener("input", renderDashboard);
+
+document.getElementById("categoryFilter")
+    .addEventListener("change", renderDashboard);
+
+// 10. Restore demo inventory
+document.getElementById("resetButton")
+    .addEventListener("click", () => {
+        inventory = initialInventory.map(item => ({ ...item }));
+        nextId = 3;
+
+        document.getElementById("search").value = "";
+        document.getElementById("categoryFilter").value = "All";
+
+        renderDashboard();
+        showMessage("Demo inventory restored.", false);
+    });
+
+// 11. Interactive price calculator
+document.getElementById("calculateButton")
+    .addEventListener("click", function() {
+        const priceInput = document.getElementById("calcPrice").value;
+        const discountInput = document.getElementById("discount").value;
+        const taxInput = document.getElementById("tax").value;
+
+        const price = Number(priceInput);
+        const discount = Number(discountInput);
+        const tax = Number(taxInput);
+
+        const result = document.getElementById("calculationResult");
+
+        if (
+            priceInput.trim() === "" ||
+            discountInput.trim() === "" ||
+            taxInput.trim() === "" ||
+            !Number.isFinite(price) ||
+            !Number.isFinite(discount) ||
+            !Number.isFinite(tax) ||
+            price <= 0 ||
+            discount < 0 || discount > 100 ||
+            tax < 0 || tax > 100
+        ) {
+            result.textContent =
+                "Enter a positive price and percentages from 0 to 100.";
+            return;
+        }
+
+        const finalPrice =
+            calculateFinalPrice(price, discount, tax);
+
+        result.textContent =
+            "Final Price after Discount and Tax: $" +
+            finalPrice.toFixed(2);
+    });
+
+// 12. Copy the report
+document.getElementById("copyButton")
+    .addEventListener("click", async () => {
+        const report = document.getElementById("report").textContent;
+
+        try {
+            await navigator.clipboard.writeText(report);
+            showMessage("Report copied successfully.", false);
+        } catch (error) {
+            showMessage(
+                "Clipboard unavailable. Copy the report manually.",
+                true
+            );
+        }
+    });
+
+// 13. Initialize dashboard
+renderDashboard();
+</script>
+
+</body>
+</html>
